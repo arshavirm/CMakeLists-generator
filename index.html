@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMakeLists.txt generator</title>
+<style>
+:root{--bg:#eceff2;--grid:#d9dee4;--panel:#fbfcfd;--ink:#16202e;--mute:#5b6676;--line:#c4ccd6;--acc:#2b50aa;--accfg:#fff;--out:#101826;--outfg:#dbe4f3;--r:6px}
+@media (prefers-color-scheme:dark){:root{--bg:#121820;--grid:#1a222c;--panel:#18202a;--ink:#e4eaf2;--mute:#93a0b2;--line:#2c3744;--acc:#8fb0ff;--accfg:#0e1624;--out:#0a0f17;--outfg:#d3deef}}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+header{max-width:1240px;margin:0 auto;padding:28px 20px 8px}
+h1{margin:0;font:700 clamp(26px,4vw,38px)/1.1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:-.02em}
+header p{margin:6px 0 0;color:var(--mute);max-width:60ch}
+main{max-width:1240px;margin:0 auto;padding:16px 20px 40px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){main{grid-template-columns:minmax(0,1fr)}}
+fieldset{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin:0 0 14px;padding:14px 16px 16px;min-width:0}
+legend{padding:0 8px;font-weight:650;color:var(--acc)}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+label{display:block;font-size:13px;color:var(--mute);margin-top:10px}
+fieldset>label:first-of-type,.row>label{margin-top:0}
+input[type=text],select,textarea{width:100%;margin-top:4px;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);font:14px ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+textarea{resize:vertical;min-height:64px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14px;margin-top:8px}
+.chk input{accent-color:var(--acc);width:16px;height:16px;margin:0}
+.chks{display:flex;flex-wrap:wrap;gap:4px 18px}
+small{display:block;color:var(--mute);margin-top:4px;font-size:12px}
+aside{position:sticky;top:12px}
+@media (max-width:900px){aside{position:static}}
+.bar{display:flex;align-items:center;gap:8px;background:var(--out);border:1px solid var(--line);border-bottom:0;border-radius:var(--r) var(--r) 0 0;padding:8px 10px}
+.bar b{flex:1;font:600 13px ui-monospace,Menlo,Consolas,monospace;color:var(--outfg)}
+button{font:600 13px system-ui,sans-serif;padding:6px 12px;border-radius:4px;border:1px solid var(--acc);background:var(--acc);color:var(--accfg);cursor:pointer}
+button.alt{background:transparent;color:var(--outfg);border-color:#46546a}
+pre{margin:0;background:var(--out);color:var(--outfg);border:1px solid var(--line);border-radius:0 0 var(--r) var(--r);padding:14px;overflow:auto;max-height:calc(100vh - 110px);min-height:300px;font:13px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,monospace;tab-size:4}
+@media (max-width:900px){pre{max-height:none}}
+footer{max-width:1240px;margin:0 auto;padding:0 20px 28px;color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<h1>CMakeLists.txt generator</h1>
+<p>Fill in the form and the file updates as you type. Everything runs in your browser; nothing is uploaded.</p>
+</header>
+<main>
+<form id="f" onsubmit="return false">
+<fieldset><legend>Project</legend>
+<div class="row">
+<label>Name<input type="text" id="name" value="my_project"></label>
+<label>Version<input type="text" id="version" value="0.1.0"></label>
+<label>Minimum CMake<select id="min"><option>3.16</option><option>3.20</option><option selected>3.25</option><option>3.28</option></select></label>
+</div>
+<label>Description<input type="text" id="desc" value=""></label>
+<div class="chks" style="margin-top:6px">
+<label class="chk"><input type="checkbox" id="lc" > C</label>
+<label class="chk"><input type="checkbox" id="lcxx" checked> C++</label>
+</div>
+<div class="row" style="margin-top:8px">
+<label>C++ standard<select id="cxx"><option>11</option><option>14</option><option selected>17</option><option>20</option><option>23</option></select></label>
+<label>C standard<select id="cstd"><option>99</option><option selected>11</option><option>17</option><option>23</option></select></label>
+</div>
+</fieldset>
+
+<fieldset><legend>Target</legend>
+<div class="row">
+<label>Type<select id="type"><option value="exe">Executable</option><option value="static">Static library</option><option value="shared">Shared library</option><option value="iface">Header-only library</option></select></label>
+<label>Target name<input type="text" id="tname" placeholder="same as project"></label>
+</div>
+<label>Source files, one per line<textarea id="src">src/main.cpp</textarea></label>
+<label class="chk"><input type="checkbox" id="glob"> Treat lines as glob patterns (file(GLOB_RECURSE))</label>
+<label>Include directories, one per line<textarea id="inc">include</textarea></label>
+</fieldset>
+
+<fieldset><legend>Dependencies</legend>
+<label>find_package, one per line<textarea id="pkgs" placeholder="Threads&#10;Boost 1.80 COMPONENTS system filesystem&#10;OpenSSL"></textarea></label>
+<small>Format: Name [version] [COMPONENTS a b]. All are marked REQUIRED.</small>
+<label>FetchContent, one per line<textarea id="fetch" placeholder="fmt https://github.com/fmtlib/fmt.git 10.2.1"></textarea></label>
+<small>Format: name git-url tag.</small>
+<label>Link libraries, one per line<textarea id="libs" placeholder="Threads::Threads&#10;fmt::fmt"></textarea></label>
+</fieldset>
+
+<fieldset><legend>Build options</legend>
+<div class="row">
+<label>Default build type<select id="bt"><option>Release</option><option>Debug</option><option>RelWithDebInfo</option><option>MinSizeRel</option></select></label>
+</div>
+<div class="chks">
+<label class="chk"><input type="checkbox" id="warn" checked> Warnings (-Wall -Wextra)</label>
+<label class="chk"><input type="checkbox" id="werr"> Warnings as errors</label>
+<label class="chk"><input type="checkbox" id="san"> Sanitizer option</label>
+<label class="chk"><input type="checkbox" id="ipo"> LTO / IPO</label>
+<label class="chk"><input type="checkbox" id="cc" checked> compile_commands.json</label>
+<label class="chk"><input type="checkbox" id="pic"> Position independent code</label>
+</div>
+<label>Compile definitions, one per line<textarea id="defs" placeholder="MY_FEATURE=1"></textarea></label>
+</fieldset>
+
+<fieldset><legend>Tests and install</legend>
+<label>Test framework<select id="tf"><option value="none">None</option><option value="ctest">Plain CTest executable</option><option value="gtest">GoogleTest (FetchContent)</option><option value="catch">Catch2 v3 (FetchContent)</option></select></label>
+<label>Test sources, one per line<textarea id="tsrc">tests/test_main.cpp</textarea></label>
+<label class="chk"><input type="checkbox" id="inst"> Add install rules</label>
+</fieldset>
+</form>
+
+<aside>
+<div class="bar"><b>CMakeLists.txt</b><button type="button" class="alt" id="copy">Copy</button><button type="button" id="dl">Download</button></div>
+<pre id="out" aria-live="polite"></pre>
+</aside>
+</main>
+<footer>Generated files are a starting point. Review them before committing.</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const lines = id => $(id).value.split("\n").map(s => s.trim()).filter(Boolean);
+const ids = ["name","version","min","desc","lc","lcxx","cxx","cstd","type","tname","src","glob","inc","pkgs","fetch","libs","bt","warn","werr","san","ipo","cc","pic","defs","tf","tsrc","inst"];
+
+function gen() {
+  const name = $("name").value.trim() || "my_project";
+  const tname = $("tname").value.trim() || name;
+  const type = $("type").value;
+  const hasC = $("lc").checked, hasCxx = $("lcxx").checked;
+  const langs = [hasC && "C", hasCxx && "CXX"].filter(Boolean).join(" ");
+  const o = [];
+  const p = (...s) => o.push(...s);
+
+  p(`cmake_minimum_required(VERSION ${$("min").value})`, "");
+  let proj = `project(${name}`;
+  if ($("version").value.trim()) proj += ` VERSION ${$("version").value.trim()}`;
+  if ($("desc").value.trim()) proj += ` DESCRIPTION "${$("desc").value.trim().replace(/"/g, '\\"')}"`;
+  if (langs) proj += ` LANGUAGES ${langs}`;
+  p(proj + ")", "");
+
+  if (hasCxx) p(`set(CMAKE_CXX_STANDARD ${$("cxx").value})`, "set(CMAKE_CXX_STANDARD_REQUIRED ON)", "set(CMAKE_CXX_EXTENSIONS OFF)");
+  if (hasC) p(`set(CMAKE_C_STANDARD ${$("cstd").value})`, "set(CMAKE_C_STANDARD_REQUIRED ON)", "set(CMAKE_C_EXTENSIONS OFF)");
+  if ($("cc").checked) p("set(CMAKE_EXPORT_COMPILE_COMMANDS ON)");
+  if ($("pic").checked) p("set(CMAKE_POSITION_INDEPENDENT_CODE ON)");
+  p("",
+    "if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)",
+    `    set(CMAKE_BUILD_TYPE ${$("bt").value} CACHE STRING "Build type" FORCE)`,
+    "endif()", "");
+  if ($("ipo").checked) p("include(CheckIPOSupported)", "check_ipo_supported(RESULT ipo_ok OUTPUT ipo_msg)", "if(ipo_ok)", "    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)", "endif()", "");
+  if ($("san").checked) p('option(ENABLE_SANITIZERS "Enable address and undefined behavior sanitizers" OFF)', "");
+
+  const pkgs = lines("pkgs");
+  if (pkgs.length) {
+    pkgs.forEach(l => {
+      const [head, comps] = l.split(/\s+COMPONENTS\s+/i);
+      p(`find_package(${head.trim()} REQUIRED${comps ? " COMPONENTS " + comps.trim() : ""})`);
+    });
+    p("");
+  }
+  const fetch = lines("fetch").map(l => l.split(/\s+/));
+  const tf = $("tf").value;
+  if (tf === "gtest") fetch.push(["googletest", "https://github.com/google/googletest.git", "v1.14.0"]);
+  if (tf === "catch") fetch.push(["Catch2", "https://github.com/catchorg/Catch2.git", "v3.5.2"]);
+  if (fetch.length) {
+    p("include(FetchContent)");
+    fetch.forEach(([n, url, tag]) => {
+      p(`FetchContent_Declare(${n}`, `    GIT_REPOSITORY ${url || ""}`, `    GIT_TAG ${tag || "main"}`, ")");
+    });
+    p(`FetchContent_MakeAvailable(${fetch.map(f => f[0]).join(" ")})`, "");
+  }
+
+  const srcs = lines("src");
+  const dirs = lines("inc");
+  const vis = type === "iface" ? "INTERFACE" : (type === "exe" ? "PRIVATE" : "PUBLIC");
+  if (type !== "iface" && srcs.length) {
+    if ($("glob").checked) p(`file(GLOB_RECURSE ${name.toUpperCase()}_SOURCES CONFIGURE_DEPENDS`, ...srcs.map(s => `    "${s}"`), ")", "");
+  }
+  const srcVar = $("glob").checked ? `\${${name.toUpperCase()}_SOURCES}` : null;
+  const srcList = () => srcVar ? [`    ${srcVar}`] : srcs.map(s => `    ${s}`);
+  if (type === "exe") p(`add_executable(${tname}`, ...srcList(), ")");
+  else if (type === "iface") p(`add_library(${tname} INTERFACE)`);
+  else p(`add_library(${tname} ${type === "static" ? "STATIC" : "SHARED"}`, ...srcList(), ")");
+  if (type !== "exe") p(`add_library(${name}::${tname} ALIAS ${tname})`);
+  p("");
+
+  const libOrExe = type !== "exe";
+  if (dirs.length) {
+    p(`target_include_directories(${tname} ${vis}`,
+      ...dirs.map(d => libOrExe ? `    $<BUILD_INTERFACE:\${CMAKE_CURRENT_SOURCE_DIR}/${d}>` : `    \${CMAKE_CURRENT_SOURCE_DIR}/${d}`),
+      ...(libOrExe && $("inst").checked ? ["    $<INSTALL_INTERFACE:include>"] : []), ")", "");
+  }
+  const libs = lines("libs");
+  if (libs.length) p(`target_link_libraries(${tname} ${vis}`, ...libs.map(l => `    ${l}`), ")", "");
+  const defs = lines("defs");
+  if (defs.length) p(`target_compile_definitions(${tname} ${vis}`, ...defs.map(d => `    ${d}`), ")", "");
+
+  if (type !== "iface") {
+    if ($("warn").checked) {
+      p("if(MSVC)", `    target_compile_options(${tname} PRIVATE /W4${$("werr").checked ? " /WX" : ""})`, "else()",
+        `    target_compile_options(${tname} PRIVATE -Wall -Wextra -Wpedantic${$("werr").checked ? " -Werror" : ""})`, "endif()", "");
+    }
+    if ($("san").checked) {
+      p("if(ENABLE_SANITIZERS AND NOT MSVC)",
+        `    target_compile_options(${tname} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)`,
+        `    target_link_options(${tname} PRIVATE -fsanitize=address,undefined)`, "endif()", "");
+    }
+  }
+
+  if (tf !== "none") {
+    const tsrc = lines("tsrc").map(s => `    ${s}`);
+    p("enable_testing()", `add_executable(${tname}_tests`, ...tsrc, ")");
+    const link = { ctest: "", gtest: " GTest::gmock_main", catch: " Catch2::Catch2WithMain" }[tf];
+    p(`target_link_libraries(${tname}_tests PRIVATE${type === "exe" ? "" : " " + tname}${link})`);
+    if (type === "exe") p(`# Executables cannot be linked; move shared code into a library target to test it.`);
+    if (tf === "gtest") p("include(GoogleTest)", `gtest_discover_tests(${tname}_tests)`);
+    else if (tf === "catch") p("list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)", "include(Catch)", `catch_discover_tests(${tname}_tests)`);
+    else p(`add_test(NAME ${tname}_tests COMMAND ${tname}_tests)`);
+    p("");
+  }
+
+  if ($("inst").checked) {
+    p("include(GNUInstallDirs)", `install(TARGETS ${tname}`, "    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}", "    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}", "    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}", ")");
+    if (libOrExe && dirs.length) p(`install(DIRECTORY ${dirs[0]}/ DESTINATION \${CMAKE_INSTALL_INCLUDEDIR})`);
+  }
+  return o.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+}
+
+function render() { $("out").textContent = gen(); }
+ids.forEach(i => $(i).addEventListener("input", render));
+$("type").addEventListener("change", () => {
+  const exe = $("type").value === "exe";
+  $("src").disabled = $("type").value === "iface";
+});
+$("copy").addEventListener("click", async () => {
+  const b = $("copy");
+  try { await navigator.clipboard.writeText($("out").textContent); b.textContent = "Copied"; }
+  catch (e) { b.textContent = "Copy failed"; }
+  setTimeout(() => b.textContent = "Copy", 1400);
+});
+$("dl").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([$("out").textContent], { type: "text/plain" }));
+  a.download = "CMakeLists.txt";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+render();
+</script>
+</body>
+</html>
